@@ -3,6 +3,7 @@
 // @description     Hubitat UI enhancements
 // @version  1.2
 // @grant    unsafeWindow
+// @"author": "Paul Fleenor (Originally from surfingbytes)"
 // @include http*://192.168.1.120/*
 // @include http*://192.168.0.100/*
 // @require  https://code.highcharts.com/stock/highstock.js
@@ -24,7 +25,6 @@ const capabilitiesToIgnoreInGraph = [
   "mediaSource",
   "status",
 ];
-const rulesContainRoomNames = true; // Set true to group by rooms per naming convention.
 
 (function () {
   onLocationChanged();
@@ -125,6 +125,29 @@ const rulesContainRoomNames = true; // Set true to group by rooms per naming con
         );
         buttonsContainer.append(newRuleButton);
       }
+
+      var iconsContainer = document.getElementsByClassName(
+        "inline-flex buttons"
+      )[0].children[0];
+
+      var rulesContainRoomNames =
+        (localStorage.getItem("groupRules") ?? "true") === "true";
+
+      var groupIcon = document.createElement("i");
+      groupIcon.innerHTML = "groups";
+      groupIcon.classList.add(...["material-icons", "viewTopButton"]);
+      groupIcon.title = "Toggle Grouping";
+
+      groupIcon.onclick = () => {
+        // toggle grouping
+        var grouping =
+          (localStorage.getItem("groupRules") ?? "true") === "true";
+        localStorage.setItem("groupRules", !grouping);
+
+        grouping ? location.reload() : regroupRules();
+      };
+
+      iconsContainer.append(groupIcon);
     }
 
     if (rulesContainRoomNames) regroupRules();
