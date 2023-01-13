@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name     Hubitat UI enhancements
 // @description     Hubitat UI enhancements
-// @version  1.2
+// @version  1.3
 // @grant    unsafeWindow
 // @"author": "Paul Fleenor (Originally from surfingbytes)"
 // @include http*://192.168.1.120/*
