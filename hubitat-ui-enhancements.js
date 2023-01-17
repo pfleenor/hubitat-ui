@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name     Hubitat UI enhancements
 // @description     Hubitat UI enhancements
-// @version  1.3
+// @version  1.4
 // @grant    unsafeWindow
 // @"author": "Paul Fleenor (Originally from surfingbytes)"
 // @include http*://192.168.1.120/*
@@ -25,6 +25,19 @@ const capabilitiesToIgnoreInGraph = [
   "mediaSource",
   "status",
 ];
+
+var waitForElement = function (selector, callback, maxTimes = false) {
+  if (jQuery(selector).length) {
+    callback();
+  } else {
+    if (maxTimes === false || maxTimes > 0) {
+      maxTimes != false && maxTimes--;
+      setTimeout(function () {
+        waitForElement(selector, callback, maxTimes);
+      }, 100);
+    }
+  }
+};
 
 (function () {
   onLocationChanged();
@@ -152,6 +165,11 @@ const capabilitiesToIgnoreInGraph = [
 
     if (rulesContainRoomNames) regroupRules();
     removeNonRuleRows([]);
+  } else if (window.location.href.indexOf("/installedapp/configure/")) {
+    // add custom done button
+    waitForElement("#btnDone", function () {
+      addCustomDoneButton();
+    });
   } else if (window.location.href.endsWith("/mainPage/selectActions")) {
     waitForRuleEditor(false);
   } else if (window.location.pathname == "/dashboards") {
@@ -340,6 +358,49 @@ if (window.location.pathname == "/hub/zigbee/getChildAndRouteInfo") {
   //document.head.innerHTML = '<meta http-equiv="Content-Type" content="text/html;charset=UTF-8"> ';
 }
 
+function addCustomDoneButton() {
+  var hasCustomButton = jQuery(".mydone").length > 0;
+  var hasDoneButton = jQuery("#btnDone") !== null;
+
+  if (!hasCustomButton && hasDoneButton) {
+    var saveButton = document.createElement("button");
+    saveButton.onclick = function (btn) {
+      btn.preventDefault();
+
+      // original done button code
+      var stateObj = {
+        previousPage: model.configPage.previousPage,
+        currentPage: model.configPage.name,
+      };
+      var path = window.location.pathname;
+      history.pushState(stateObj, "", path);
+      jsonSubmit(
+        btn.currentTarget.name,
+        btn.currentTarget.value,
+        true,
+        false,
+        false
+      );
+
+      window.location.href = "/installedapp/list?display=rulemachine";
+    };
+    saveButton.classList.add(
+      ..."mydone mdl-button mdl-js-button mdl-button--raised save btn btn-success pull-right".split(
+        " "
+      )
+    );
+    saveButton.value = "MyDone";
+    saveButton.innerText = "Done";
+    saveButton.name = "_action_update";
+    var doneButton = jQuery("#btnDone");
+
+    doneButton.parent().append(saveButton);
+    doneButton.hide();
+  }
+
+  // button is removed onBlur, just try to add it back constantly
+  setTimeout(addCustomDoneButton, 500);
+}
 function removeNonRuleRows() {
   var appTable = document.getElementById("app-table");
   var divs = appTable.getElementsByClassName("app-row-link");
@@ -510,31 +571,31 @@ function waitForRuleEditor(scroll) {
   var rules = ruleText.split(/\r?\n/).filter((x) => x !== "");
   var script = document.createElement("script");
   script.innerHTML = `function ruleEdit(action, index) {
-  var ddl = document.getElementById(\`settings[$\{action\}Act]\`);
-  ddl.selectedIndex = action == 'delete' ? index : index + 1;
-  changeSubmit(ddl);
-  return false;
-}`;
+                          var ddl = document.getElementById(\`settings[$\{action\}Act]\`);
+                          ddl.selectedIndex = action == 'delete' ? index : index + 1;
+                          changeSubmit(ddl);
+                          return false;
+                        }`;
   document.head.appendChild(script);
 
   var style = document.createElement("style");
   style.innerHTML = `
-#ruleEditor {
-  border-collapse: collapse;
-}
+        #ruleEditor {
+          border-collapse: collapse;
+        }
 
-#ruleEditor a {
-  display: none;
-}
+        #ruleEditor a {
+          display: none;
+        }
 
-#ruleEditor tr:hover {
-  background-color: #ffff99;
-}
+        #ruleEditor tr:hover {
+          background-color: #ffff99;
+        }
 
-#ruleEditor tr:hover a{
-  display: block;
-}
-`;
+        #ruleEditor tr:hover a{
+          display: block;
+        }
+        `;
   document.head.appendChild(style);
 
   var rows = "";
@@ -543,11 +604,11 @@ function waitForRuleEditor(scroll) {
 
   rules.forEach((rule, i) => {
     rows += `<tr>
-							<td>${rule}</td>
-							<td><a href="#" onclick="ruleEdit('insert', ${i})" title="Insert action before"><i class=\"material-icons\">add</i></a></td>
-							<td><a href="#" onclick="ruleEdit('edit', ${i})" title="Edit action"><i class=\"material-icons\">edit</i></a></td>
-							<td><a href="#" onclick="ruleEdit('delete', ${i})" title="Delete action"><i class=\"material-icons\">delete</i></a></td>
-						</tr>`;
+                    <td>${rule}</td>
+                    <td><a href="#" onclick="ruleEdit('insert', ${i})" title="Insert action before"><i class=\"material-icons\">add</i></a></td>
+                    <td><a href="#" onclick="ruleEdit('edit', ${i})" title="Edit action"><i class=\"material-icons\">edit</i></a></td>
+                    <td><a href="#" onclick="ruleEdit('delete', ${i})" title="Delete action"><i class=\"material-icons\">delete</i></a></td>
+                </tr>`;
   });
 
   table.innerHTML = rows;
